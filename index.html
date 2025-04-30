@@ -73,28 +73,9 @@
       90% { opacity: 1; transform: translateY(0); }
       100% { opacity: 0; transform: translateY(-10px); }
     }
-    /* 시간 슬롯 높이 조정 */
-    .fc-timegrid-slot {
-      height: 0.8rem !important; /* 시간 슬롯 높이를 줄여 더 많은 슬롯 표시 */
-    }
-    .fc-timegrid-slot-label {
-      font-size: 0.7rem !important; /* 시간 레이블 폰트 크기 조정 */
-    }
-    .fc-event {
-      font-size: 0.8rem !important; /* 이벤트 폰트 크기 조정 */
-      padding: 2px !important; /* 패딩 조정 */
-      line-height: 1.1 !important; /* 줄 간격 조정 */
-    }
-    /* 모바일에서 캘린더 최적화 */
+    /* 모바일에서 기본적인 스타일만 유지 */
     @media (max-width: 640px) {
       body { margin: 20px; }
-      #calendar { height: 800px !important; } /* 캘린더 높이 증가 */
-      .fc-scroller { overflow-x: hidden !important; }
-      #modal .bg-white, #passwordModal .bg-white, #adminPasswordModal .bg-white, #deleteConfirmModal .bg-white {
-        width: 90vw !important;
-        max-height: 80vh !important;
-        overflow-y: auto !important;
-      }
     }
   </style>
 </head>

@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>88 Studio Reservation</title>
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    @font-face {
+      font-family: 'Futura';
+      src: local('Futura Medium'), url('https://fonts.cdnfonts.com/s/16397/FuturaMedium.woff') format('woff');
+      font-weight: 500;
+      font-style: normal;
+    }
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    body { font-family: 'Futura', 'Pretendard', sans-serif; margin: 40px; background: #f9fafb; padding-top: 30px; }
+    h1 { font-family: 'Futura', 'Pretendard', sans-serif; margin-top: 20px; margin-bottom: 20px; }
+    body.modal-open { overflow: hidden; }
+    #modal, #passwordModal, #adminPasswordModal, #deleteConfirmModal { 
+      backdrop-filter: blur(4px); 
+      z-index: 1000;
+    }
+    #calendar { height: 600px; }
+    .admin-btn { 
+      position: fixed; 
+      top: 20px; 
+      right: 20px; 
+      z-index: 1500; 
+      transition: background-color 0.3s;
+    }
+    select option:disabled { color: #d1d5db; background: #f3f4f6; }
+    #messageContainer { 
+      position: fixed; 
+      top: 20px; 
+      left: 50%; 
+      transform: translateX(-50%); 
+      z-index: 2000; 
+      max-width: 500px; 
+      width: 90%; 
+      text-align: center; 
+    }
+    .message { 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      margin-bottom: 10px; 
+      color: white; 
+      font-weight: bold; 
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); 
+      animation: fadeInOut 3s ease-in-out; 
+    }
+    .message.success { background-color: #10B981; }
+    .message.error { background-color: #EF4444; }
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateY(-10px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-10px); }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="messageContainer"></div>
+
+  <div class="flex flex-col items-center mb-8">
+    <h1 class="text-4xl font-bold">88 Studio Reservation</h1>
+    <div class="flex justify-center mt-4">
+      <button onclick="openModal()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl text-lg">
+        예약하기
+      </button>
+    </div>
+  </div>
+
+  <button id="adminButton" onclick="toggleAdminMode()" class="admin-btn bg-gray-400 hover:bg-gray-500 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-md" title="관리자 모드 활성화">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+      <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-1 1v7a1 1 0 001 1h10a1 1 0 001-1v-7a1 1 0 00-1-1h-1V6a4 4 0 00-4-4zm-2 5V6a2 2 0 114 0v1H8z" clip-rule="evenodd" />
+    </svg>
+  </button>
+
+  <div id="calendar" class="max-w-7xl mx-auto bg-white p-8 rounded-2xl shadow-lg"></div>
+
+  <!-- 예약 신청 모달 -->
+  <div id="modal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-8 rounded-2xl w-96 shadow-2xl">
+      <h2 class="text-2xl font-bold mb-6 text-center">예약 신청</h2>
+      <form id="reservationForm">
+        <div class="mb-4">
+          <label class="block mb-1">신청자</label>
+          <input type="text" name="name" required class="w-full border p-2 rounded-lg">
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">날짜</label>
+          <input type="date" name="date" required class="w-full border p-2 rounded-lg">
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">룸 선택</label>
+          <select name="room" required class="w-full border p-2 rounded-lg">
+            <option value="">룸을 선택하세요</option>
+            <option value="컨트롤룸">컨트롤룸</option>
+            <option value="A룸">A룸</option>
+            <option value="B룸">B룸</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">신청 내용</label>
+          <select name="content" required class="w-full border p-2 rounded-lg">
+            <option value="">선택하세요</option>
+            <option value="녹음">녹음</option>
+            <option value="합주">합주</option>
+            <option value="촬영">촬영</option>
+            <option value="와우산라디오">와우산라디오</option>
+            <option value="ETC">ETC</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">시작 시간</label>
+          <select name="startTime" required class="w-full border p-2 rounded-lg">
+            <option value="06:00">06:00</option>
+            <option value="06:30">06:30</option>
+            <option value="07:00">07:00</option>
+            <option value="07:30">07:30</option>
+            <option value="08:00">08:00</option>
+            <option value="08:30">08:30</option>
+            <option value="09:00">09:00</option>
+            <option value="09:30">09:30</option>
+            <option value="10:00">10:00</option>
+            <option value="10:30">10:30</option>
+            <option value="11:00">11:00</option>
+            <option value="11:30">11:30</option>
+            <option value="12:00">12:00</option>
+            <option value="12:30">12:30</option>
+            <option value="13:00">13:00</option>
+            <option value="13:30">13:30</option>
+            <option value="14:00">14:00</option>
+            <option value="14:30">14:30</option>
+            <option value="15:00">15:00</option>
+            <option value="15:30">15:30</option>
+            <option value="16:00">16:00</option>
+            <option value="16:30">16:30</option>
+            <option value="17:00">17:00</option>
+            <option value="17:30">17:30</option>
+            <option value="18:00">18:00</option>
+            <option value="18:30">18:30</option>
+            <option value="19:00">19:00</option>
+            <option value="19:30">19:30</option>
+            <option value="20:00">20:00</option>
+            <option value="20:30">20:30</option>
+            <option value="21:00">21:00</option>
+            <option value="21:30">21:30</option>
+            <option value="22:00">22:00</option>
+            <option value="22:30">22:30</option>
+            <option value="23:00">23:00</option>
+            <option value="23:30">23:30</option>
+            <option value="00:00">00:00 (다음 날)</option>
+            <option value="00:30">00:30 (다음 날)</option>
+            <option value="01:00">01:00 (다음 날)</option>
+            <option value="01:30">01:30 (다음 날)</option>
+            <option value="02:00">02:00 (다음 날)</option>
+            <option value="02:30">02:30 (다음 날)</option>
+            <option value="03:00">03:00 (다음 날)</option>
+            <option value="03:30">03:30 (다음 날)</option>
+            <option value="04:00">04:00 (다음 날)</option>
+            <option value="04:30">04:30 (다음 날)</option>
+            <option value="05:00">05:00 (다음 날)</option>
+            <option value="05:30">05:30 (다음 날)</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">종료 시간</label>
+          <select name="endTime" required class="w-full border p-2 rounded-lg">
+            <option value="06:00">06:00</option>
+            <option value="06:30">06:30</option>
+            <option value="07:00">07:00</option>
+            <option value="07:30">07:30</option>
+            <option value="08:00">08:00</option>
+            <option value="08:30">08:30</option>
+            <option value="09:00">09:00</option>
+            <option value="09:30">09:30</option>
+            <option value="10:00">10:00</option>
+            <option value="10:30">10:30</option>
+            <option value="11:00">11:00</option>
+            <option value="11:30">11:30</option>
+            <option value="12:00">12:00</option>
+            <option value="12:30">12:30</option>
+            <option value="13:00">13:00</option>
+            <option value="13:30">13:30</option>
+            <option value="14:00">14:00</option>
+            <option value="14:30">14:30</option>
+            <option value="15:00">15:00</option>
+            <option value="15:30">15:30</option>
+            <option value="16:00">16:00</option>
+            <option value="16:30">16:30</option>
+            <option value="17:00">17:00</option>
+            <option value="17:30">17:30</option>
+            <option value="18:00">18:00</option>
+            <option value="18:30">18:30</option>
+            <option value="19:00">19:00</option>
+            <option value="19:30">19:30</option>
+            <option value="20:00">20:00</option>
+            <option value="20:30">20:30</option>
+            <option value="21:00">21:00</option>
+            <option value="21:30">21:30</option>
+            <option value="22:00">22:00</option>
+            <option value="22:30">22:30</option>
+            <option value="23:00">23:00</option>
+            <option value="23:30">23:30</option>
+            <option value="00:00">00:00 (다음 날)</option>
+            <option value="00:30">00:30 (다음 날)</option>
+            <option value="01:00">01:00 (다음 날)</option>
+            <option value="01:30">01:30 (다음 날)</option>
+            <option value="02:00">02:00 (다음 날)</option>
+            <option value="02:30">02:30 (다음 날)</option>
+            <option value="03:00">03:00 (다음 날)</option>
+            <option value="03:30">03:30 (다음 날)</option>
+            <option value="04:00">04:00 (다음 날)</option>
+            <option value="04:30">04:30 (다음 날)</option>
+            <option value="05:00">05:00 (다음 날)</option>
+            <option value="05:30">05:30 (다음 날)</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">비밀번호 (삭제용)</label>
+          <input type="password" name="password" required class="w-full border p-2 rounded-lg">
+        </div>
+        <div class="flex justify-end space-x-3">
+          <button type="button" onclick="closeModal()" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-5 rounded-lg">
+            취소
+          </button>
+          <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-5 rounded-lg">
+            신청
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 비밀번호 입력 모달 -->
+  <div id="passwordModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-2xl w-80 shadow-2xl">
+      <h2 class="text-xl font-bold mb-4 text-center">비밀번호 입력</h2>
+      <form id="passwordForm">
+        <div class="mb-4">
+          <input type="password" name="password" required class="w-full border p-2 rounded-lg" placeholder="비밀번호">
+        </div>
+        <div class="flex justify-end space-x-3">
+          <button type="button" onclick="closePasswordModal()" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">
+            취소
+          </button>
+          <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
+            확인
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 관리자 비밀번호 입력 모달 -->
+  <div id="adminPasswordModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-2xl w-80 shadow-2xl">
+      <h2 class="text-xl font-bold mb-4 text-center">관리자 비밀번호 입력</h2>
+      <form id="adminPasswordForm">
+        <div class="mb-4">
+          <input type="password" name="adminPassword" required class="w-full border p-2 rounded-lg" placeholder="관리자 비밀번호">
+        </div>
+        <div class="flex justify-end space-x-3">
+          <button type="button" onclick="closeAdminPasswordModal()" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">
+            취소
+          </button>
+          <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
+            확인
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 삭제 확인 모달 -->
+  <div id="deleteConfirmModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-2xl w-80 shadow-2xl">
+      <h2 class="text-xl font-bold mb-4 text-center">예약 삭제</h2>
+      <p class="text-center mb-4">정말로 이 예약을 삭제하시겠습니까?</p>
+      <div class="flex justify-end space-x-3">
+        <button onclick="closeDeleteConfirmModal()" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">
+          취소
+        </button>
+        <button onclick="confirmDeleteEvent()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">
+          삭제
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let calendar;
+    let isAdminMode = false;
+    let currentEvent = null;
+    const ADMIN_PASSWORD = "0106*";
+
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM loaded');
+      const calendarEl = document.getElementById('calendar');
+      if (!calendarEl) {
+        console.error('Calendar element not found!');
+        showMessage('오류: 캘린더 요소를 찾을 수 없습니다.', 'error');
+        return;
+      }
+      console.log('Calendar element found:', calendarEl);
+
+      if (typeof FullCalendar === 'undefined') {
+        console.error('FullCalendar is not defined. Check if JS is loaded.');
+        showMessage('오류: FullCalendar 라이브러리를 로드할 수 없습니다.', 'error');
+        return;
+      }
+
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'timeGridDay,timeGridWeek'
+        },
+        locale: 'ko',
+        selectable: true,
+        events: [],
+        eventColor: '#3788d8',
+        eventClick: function(info) {
+          console.log('Event clicked:', info.event.title, info.event.start, info.event.end);
+          currentEvent = info.event;
+          console.log('Current event set:', currentEvent.title, 'Extended Props:', currentEvent.extendedProps);
+          if (isAdminMode) {
+            console.log('Admin mode: Opening delete confirmation');
+            openDeleteConfirmModal();
+          } else {
+            console.log('Normal mode: Opening password modal');
+            openPasswordModal();
+          }
+        }
+      });
+      console.log('Calendar initialized');
+
+      calendar.render();
+      console.log('Calendar rendered');
+      updateAdminButton();
+    });
+
+    function getRoomColor(room) {
+      switch(room) {
+        case '컨트롤룸': return '#EF4444';
+        case 'A룸': return '#10B981';
+        case 'B룸': return '#3B82F6';
+        default: return '#6B7280';
+      }
+    }
+
+    function getKSTDate() {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      const parts = formatter.formatToParts(now);
+      const year = parts.find(p => p.type === 'year').value;
+      const month = parts.find(p => p.type === 'month').value;
+      const day = parts.find(p => p.type === 'day').value;
+      return `${year}-${month}-${day}`;
+    }
+
+    function showMessage(text, type) {
+      const messageContainer = document.getElementById('messageContainer');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${type}`;
+      messageDiv.textContent = text;
+      messageContainer.appendChild(messageDiv);
+      console.log(`Message displayed: ${text} (${type})`);
+      setTimeout(() => {
+        messageDiv.remove();
+      }, 3000);
+    }
+
+    function updateAdminButton() {
+      const adminButton = document.getElementById('adminButton');
+      if (isAdminMode) {
+        adminButton.classList.remove('bg-gray-400', 'hover:bg-gray-500');
+        adminButton.classList.add('bg-red-500', 'hover:bg-red-600');
+        adminButton.setAttribute('title', '관리자 모드 비활성화');
+      } else {
+        adminButton.classList.remove('bg-red-500', 'hover:bg-red-600');
+        adminButton.classList.add('bg-gray-400', 'hover:bg-gray-500');
+        adminButton.setAttribute('title', '관리자 모드 활성화');
+      }
+      console.log('Admin button updated, isAdminMode:', isAdminMode);
+    }
+
+    function toggleAdminMode() {
+      console.log('Toggling admin mode, current state:', isAdminMode);
+      if (isAdminMode) {
+        isAdminMode = false;
+        showMessage('관리자 모드가 비활성화되었습니다.', 'success');
+        updateAdminButton();
+      } else {
+        openAdminPasswordModal();
+      }
+    }
+
+    function timeToMinutes(time) {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours * 60 + minutes;
+    }
+
+    function updateTimeOptions(modalId, selectedDate, selectedRoom) {
+      console.log('updateTimeOptions called:', { modalId, selectedDate, selectedRoom });
+      const startTimeSelect = document.querySelector(`#${modalId} select[name="startTime"]`);
+      const endTimeSelect = document.querySelector(`#${modalId} select[name="endTime"]`);
+      if (!startTimeSelect || !endTimeSelect) {
+        console.error('Time select elements not found for modal:', modalId);
+        showMessage('오류: 시간 선택 요소를 찾을 수 없습니다.', 'error');
+        return;
+      }
+
+      // 모든 옵션을 기본적으로 활성화
+      Array.from(startTimeSelect.options).forEach(option => {
+        option.disabled = false;
+        option.style.color = '';
+        option.style.background = '';
+      });
+      Array.from(endTimeSelect.options).forEach(option => {
+        option.disabled = false;
+        option.style.color = '';
+        option.style.background = '';
+      });
+
+      if (!selectedDate || !selectedRoom) {
+        console.log('No date or room selected, keeping all time options enabled');
+        return;
+      }
+
+      const events = calendar.getEvents();
+      console.log('Total events in calendar:', events.length);
+      const reservedTimes = [];
+
+      // 다른 예약된 시간대 수집
+      events.forEach(event => {
+        if (event.extendedProps.room === selectedRoom) {
+          const eventStart = new Date(event.start);
+          const eventEnd = new Date(event.end);
+          const eventStartDate = eventStart.toISOString().split('T')[0];
+          const eventEndDate = eventEnd.toISOString().split('T')[0];
+
+          // 이벤트가 선택된 날짜와 겹치는지 확인
+          if (eventStartDate <= selectedDate && selectedDate <= eventEndDate) {
+            let startTime = eventStart.toTimeString().slice(0, 5);
+            let endTime = eventEnd.toTimeString().slice(0, 5);
+
+            // 이벤트가 선택된 날짜 이전에 시작된 경우
+            if (eventStartDate < selectedDate) {
+              startTime = '00:00';
+              console.log('Event started on a previous day, setting startTime to 00:00');
+            }
+
+            // 이벤트가 선택된 날짜 이후에 끝나는 경우
+            if (eventEndDate > selectedDate) {
+              endTime = '24:00';
+              console.log('Event ends on a future day, setting endTime to 24:00');
+            } else if (endTime === '00:00' && eventEndDate === selectedDate) {
+              endTime = '24:00';
+              console.log('Event ends at 00:00 on selected date, setting endTime to 24:00');
+            }
+
+            reservedTimes.push({ 
+              start: startTime, 
+              end: endTime, 
+              eventStartDate: eventStartDate, 
+              eventEndDate: eventEndDate
+            });
+            console.log('Found reserved time:', { room: selectedRoom, selectedDate, startTime, endTime, eventStartDate, eventEndDate });
+          }
+        }
+      });
+
+      console.log('Reserved times for date and room:', reservedTimes);
+
+      // 시작 시간 비활성화
+      Array.from(startTimeSelect.options).forEach(option => {
+        const optionTime = option.value;
+        let isDisabled = false;
+
+        reservedTimes.forEach(time => {
+          let startTime = time.start;
+          let endTime = time.end === '24:00' ? '23:59' : time.end;
+
+          let optionMinutes = timeToMinutes(optionTime);
+          let startMinutes = timeToMinutes(startTime);
+          let endMinutes = timeToMinutes(endTime);
+
+          // 다음 날 시간대(00:00~05:30) 처리
+          const isNextDayOption = optionTime <= '05:30' && optionTime >= '00:00';
+          if (isNextDayOption) {
+            optionMinutes += 24 * 60; // 다음 날로 간주, 24시간 추가
+          }
+
+          // 이벤트가 다음 날로 넘어가는 경우
+          if (time.eventEndDate > selectedDate || endTime === '24:00') {
+            if (endTime === '24:00') {
+              endMinutes = timeToMinutes('23:59');
+            }
+            if (optionMinutes >= startMinutes && (optionMinutes < endMinutes || (endMinutes < startMinutes && optionMinutes < (endMinutes + 24 * 60)))) {
+              isDisabled = true;
+              console.log('Disabling start time option:', optionTime, 'for date:', selectedDate);
+            }
+          } else {
+            if (optionMinutes >= startMinutes && optionMinutes < endMinutes) {
+              isDisabled = true;
+              console.log('Disabling start time option:', optionTime, 'for date:', selectedDate);
+            }
+          }
+        });
+
+        if (isDisabled) {
+          option.disabled = true;
+          option.style.color = '#d1d5db';
+          option.style.background = '#f3f4f6';
+        } else {
+          option.disabled = false;
+          option.style.color = '';
+          option.style.background = '';
+          console.log('Ensuring start time option is enabled:', optionTime);
+        }
+      });
+
+      // 종료 시간 비활성화
+      Array.from(endTimeSelect.options).forEach(option => {
+        const optionTime = option.value;
+        let isDisabled = false;
+
+        reservedTimes.forEach(time => {
+          let startTime = time.start;
+          let endTime = time.end === '24:00' ? '23:59' : time.end;
+
+          let optionMinutes = timeToMinutes(optionTime);
+          let startMinutes = timeToMinutes(startTime);
+          let endMinutes = timeToMinutes(endTime);
+
+          // 다음 날 시간대(00:00~05:30) 처리
+          const isNextDayOption = optionTime <= '05:30' && optionTime >= '00:00';
+          if (isNextDayOption) {
+            optionMinutes += 24 * 60; // 다음 날로 간주, 24시간 추가
+          }
+
+          // 이벤트가 다음 날로 넘어가는 경우
+          if (time.eventEndDate > selectedDate || endTime === '24:00') {
+            if (endTime === '24:00') {
+              endMinutes = timeToMinutes('23:59');
+            }
+            if (optionMinutes > startMinutes && (optionMinutes <= endMinutes || (endMinutes < startMinutes && optionMinutes <= (endMinutes + 24 * 60)))) {
+              isDisabled = true;
+              console.log('Disabling end time option:', optionTime, 'for date:', selectedDate);
+            }
+          } else {
+            if (optionMinutes > startMinutes && optionMinutes <= endMinutes) {
+              isDisabled = true;
+              console.log('Disabling end time option:', optionTime, 'for date:', selectedDate);
+            }
+          }
+        });
+
+        if (isDisabled) {
+          option.disabled = true;
+          option.style.color = '#d1d5db';
+          option.style.background = '#f3f4f6';
+        } else {
+          option.disabled = false;
+          option.style.color = '';
+          option.style.background = '';
+          console.log('Ensuring end time option is enabled:', optionTime);
+        }
+      });
+    }
+
+    function openModal() {
+      console.log('Opening reservation modal');
+      const modal = document.getElementById('modal');
+      const form = document.getElementById('reservationForm');
+      const dateInput = form.querySelector('input[name="date"]');
+      const roomSelect = form.querySelector('select[name="room"]');
+
+      form.reset();
+      const today = getKSTDate();
+      dateInput.value = today;
+      console.log('Set reservation date input to:', dateInput.value);
+
+      const updateTimes = () => {
+        const date = dateInput.value;
+        const room = roomSelect.value;
+        console.log('Updating times for reservation modal:', { date, room });
+        updateTimeOptions('modal', date, room);
+      };
+
+      // 기존 이벤트 리스너 제거
+      dateInput.removeEventListener('change', updateTimes);
+      roomSelect.removeEventListener('change', updateTimes);
+
+      // 이벤트 리스너 추가
+      dateInput.addEventListener('change', updateTimes);
+      roomSelect.addEventListener('change', updateTimes);
+
+      // 초기 시간 옵션 업데이트 (룸 선택 전이므로 빈 상태로 시작)
+      updateTimes();
+
+      modal.classList.remove('hidden');
+      document.body.classList.add('modal-open');
+      console.log('Reservation modal displayed');
+    }
+
+    function closeModal() {
+      console.log('Closing reservation modal');
+      const modal = document.getElementById('modal');
+      if (!modal) {
+        console.error('Reservation modal not found!');
+        showMessage('오류: 예약 모달을 찾을 수 없습니다.', 'error');
+        return;
+      }
+      modal.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+    }
+
+    function openPasswordModal() {
+      console.log('Opening password modal');
+      const modal = document.getElementById('passwordModal');
+      if (!modal) {
+        console.error('Password modal not found!');
+        showMessage('오류: 비밀번호 모달을 찾을 수 없습니다.', 'error');
+        return;
+      }
+      modal.classList.remove('hidden');
+      document.body.classList.add('modal-open');
+      console.log('Password modal displayed');
+    }
+
+    function closePasswordModal() {
+      console.log('Closing password modal');
+      const modal = document.getElementById('passwordModal');
+      if (!modal) {
+        console.error('Password modal not found!');
+        showMessage('오류: 비밀번호 모달을 찾을 수 없습니다.', 'error');
+        return;
+      }
+      modal.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+    }
+
+    function openAdminPasswordModal() {
+      console.log('Opening admin password modal');
+      const modal = document.getElementById('adminPasswordModal');
+      if (!modal) {
+        console.error('Admin password modal not found!');
+        showMessage('오류: 관리자 비밀번호 모달을 찾을 수 없습니다.', 'error');
+        return;
+      }
+      modal.classList.remove('hidden');
+      document.body.classList.add('modal-open');
+      console.log('Admin password modal displayed');
+    }
+
+    function closeAdminPasswordModal() {
+      console.log('Closing admin password modal');
+      const modal = document.getElementById('adminPasswordModal');
+      if (!modal) {
+        console.error('Admin password modal not found!');
+        showMessage('오류: 관리자 비밀번호 모달을 찾을 수 없습니다.', 'error');
+        return;
+      }
+      modal.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+    }
+
+    function openDeleteConfirmModal() {
+      console.log('Opening delete confirmation modal');
+      const modal = document.getElementById('deleteConfirmModal');
+      if (!modal) {
+        console.error('Delete confirmation modal not found!');
+        showMessage('오류: 삭제 확인 모달을 찾을 수 없습니다.', 'error');
+        return;
+      }
+      modal.classList.remove('hidden');
+      document.body.classList.add('modal-open');
+      console.log('Delete confirmation modal displayed');
+    }
+
+    function closeDeleteConfirmModal() {
+      console.log('Closing delete confirmation modal');
+      const modal = document.getElementById('deleteConfirmModal');
+      if (!modal) {
+        console.error('Delete confirmation modal not found!');
+        showMessage('오류: 삭제 확인 모달을 찾을 수 없습니다.', 'error');
+        return;
+      }
+      modal.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+    }
+
+    function deleteEvent() {
+      if (!currentEvent) {
+        console.error('No event to delete');
+        showMessage('삭제할 예약이 없습니다.', 'error');
+        return;
+      }
+      console.log('Deleting event:', currentEvent.title);
+      try {
+        currentEvent.remove();
+        calendar.render();
+        showMessage('예약이 삭제되었습니다.', 'success');
+        currentEvent = null;
+      } catch (error) {
+        console.error('Error deleting event:', error);
+        showMessage('예약 삭제 중 오류가 발생했습니다.', 'error');
+      }
+    }
+
+    function confirmDeleteEvent() {
+      console.log('Confirming event deletion');
+      deleteEvent();
+      closeDeleteConfirmModal();
+    }
+
+    document.getElementById('adminPasswordForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      console.log('Admin password form submitted');
+      const password = event.target.adminPassword.value;
+      console.log('Checking admin password:', password);
+      if (password === ADMIN_PASSWORD) {
+        isAdminMode = true;
+        showMessage('관리자 모드가 활성화되었습니다.', 'success');
+        closeAdminPasswordModal();
+        updateAdminButton();
+      } else {
+        showMessage('관리자 비밀번호가 틀렸습니다.', 'error');
+        event.target.reset();
+      }
+    });
+
+    document.getElementById('passwordForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      console.log('Password form submitted');
+      if (!currentEvent) {
+        console.error('No current event for password check');
+        showMessage('예약 정보가 없습니다.', 'error');
+        closePasswordModal();
+        return;
+      }
+      const password = event.target.password.value;
+      const storedPassword = currentEvent.extendedProps.password;
+      console.log('Checking password:', password, 'against stored password:', storedPassword);
+      if (password === storedPassword) {
+        console.log('Password correct, opening delete confirmation');
+        closePasswordModal();
+        openDeleteConfirmModal();
+      } else {
+        console.log('Incorrect password');
+        showMessage('비밀번호가 일치하지 않습니다.', 'error');
+        event.target.reset();
+      }
+    });
+
+    document.getElementById('reservationForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      console.log('Reservation form submitted');
+
+      const form = event.target;
+      const name = form.name.value;
+      const date = form.date.value;
+      const startTime = form.startTime.value;
+      const endTime = form.endTime.value;
+      const room = form.room.value;
+      const content = form.content.value;
+      const password = form.password.value;
+
+      if (!name || !date || !startTime || !endTime || !room || !content || !password) {
+        console.log('Missing required fields');
+        showMessage('모든 항목을 입력해 주세요.', 'error');
+        return;
+      }
+
+      let endDate = date;
+      let isNextDay = false;
+      if (endTime <= startTime || (startTime >= '06:00' && startTime <= '23:30' && endTime <= '05:30')) {
+        const startDate = new Date(date);
+        startDate.setDate(startDate.getDate() + 1);
+        endDate = startDate.toISOString().split('T')[0];
+        isNextDay = true;
+      }
+
+      const newStart = new Date(`${date}T${startTime}`);
+      const newEnd = new Date(`${endDate}T${endTime}`);
+
+      if (isNaN(newStart.getTime()) || isNaN(newEnd.getTime())) {
+        console.error('Invalid date or time:', { newStart, newEnd });
+        showMessage('유효하지 않은 날짜 또는 시간입니다.', 'error');
+        return;
+      }
+
+      const events = calendar.getEvents();
+      console.log('Checking for conflicts:', { newStart, newEnd, room });
+
+      let hasConflict = false;
+      for (let event of events) {
+        if (event.extendedProps.room === room) {
+          const existingStart = new Date(event.start);
+          const existingEnd = new Date(event.end);
+          if (newStart < existingEnd && newEnd > existingStart) {
+            console.log('Time conflict detected');
+            hasConflict = true;
+            break;
+          }
+        }
+      }
+
+      if (hasConflict) {
+        showMessage('선택한 룸의 예약 시간이 겹칩니다.', 'error');
+        return;
+      }
+
+      try {
+        console.log('Adding new event:', { title: `${room} - ${content} - ${name}`, start: `${date}T${startTime}`, end: `${endDate}T${endTime}` });
+        calendar.addEvent({
+          title: `${room} - ${content} - ${name}`,
+          start: `${date}T${startTime}`,
+          end: `${endDate}T${endTime}`,
+          backgroundColor: getRoomColor(room),
+          borderColor: getRoomColor(room),
+          extendedProps: {
+            room: room,
+            password: password
+          }
+        });
+        calendar.render();
+        showMessage('예약이 완료되었습니다!', 'success');
+        closeModal();
+        form.reset();
+      } catch (error) {
+        console.error('Error adding event:', error);
+        showMessage('예약 중 오류가 발생했습니다.', 'error');
+      }
+    });
+  </script>
+</body>
+</html>

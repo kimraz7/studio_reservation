@@ -2,16 +2,14 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- 모바일 반응형을 위한 뷰포트 추가 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>88 Studio Reservation</title>
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Firebase SDK 추가 -->
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
   <script>
-    // Firebase 초기화
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_AUTH_DOMAIN",
@@ -32,7 +30,7 @@
       font-style: normal;
     }
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-    body { font-family: 'Futura', 'Pretendard', sans-serif; margin: 20px; background: #f9fafb; padding-top: 30px; }
+    body { font-family: 'Futura', 'Pretendard', sans-serif; margin: 40px; background: #f9fafb; padding-top: 30px; }
     h1 { font-family: 'Futura', 'Pretendard', sans-serif; margin-top: 20px; margin-bottom: 20px; }
     body.modal-open { overflow: hidden; }
     #modal, #passwordModal, #adminPasswordModal, #deleteConfirmModal { 
@@ -75,26 +73,27 @@
       90% { opacity: 1; transform: translateY(0); }
       100% { opacity: 0; transform: translateY(-10px); }
     }
-    /* 모바일 반응형 스타일 */
+    /* 시간 슬롯 높이 조정 */
+    .fc-timegrid-slot {
+      height: 0.8rem !important; /* 시간 슬롯 높이를 줄여 더 많은 슬롯 표시 */
+    }
+    .fc-timegrid-slot-label {
+      font-size: 0.7rem !important; /* 시간 레이블 폰트 크기 조정 */
+    }
+    .fc-event {
+      font-size: 0.8rem !important; /* 이벤트 폰트 크기 조정 */
+      padding: 2px !important; /* 패딩 조정 */
+      line-height: 1.1 !important; /* 줄 간격 조정 */
+    }
+    /* 모바일에서 캘린더 최적화 */
     @media (max-width: 640px) {
-      body { margin: 10px; padding-top: 20px; }
-      #calendar { height: auto !important; }
+      body { margin: 20px; }
+      #calendar { height: 800px !important; } /* 캘린더 높이 증가 */
       .fc-scroller { overflow-x: hidden !important; }
-      .fc-timegrid-slot { height: 2rem !important; }
-      .fc-event {
-        white-space: normal !important;
-        padding: 4px !important;
-        font-size: 0.9rem !important;
-        line-height: 1.2 !important;
-      }
-      .fc-event-main { overflow: visible !important; }
       #modal .bg-white, #passwordModal .bg-white, #adminPasswordModal .bg-white, #deleteConfirmModal .bg-white {
         width: 90vw !important;
         max-height: 80vh !important;
         overflow-y: auto !important;
-      }
-      #modal .bg-white form > div {
-        margin-bottom: 1rem !important;
       }
     }
   </style>
@@ -120,7 +119,6 @@
 
   <div id="calendar" class="max-w-7xl mx-auto bg-white p-8 rounded-2xl shadow-lg"></div>
 
-  <!-- 예약 신청 모달 -->
   <div id="modal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white p-8 rounded-2xl w-96 shadow-2xl">
       <h2 class="text-2xl font-bold mb-6 text-center">예약 신청</h2>
@@ -275,7 +273,6 @@
     </div>
   </div>
 
-  <!-- 비밀번호 입력 모달 -->
   <div id="passwordModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white p-6 rounded-2xl w-80 shadow-2xl">
       <h2 class="text-xl font-bold mb-4 text-center">비밀번호 입력</h2>
@@ -295,7 +292,6 @@
     </div>
   </div>
 
-  <!-- 관리자 비밀번호 입력 모달 -->
   <div id="adminPasswordModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white p-6 rounded-2xl w-80 shadow-2xl">
       <h2 class="text-xl font-bold mb-4 text-center">관리자 비밀번호 입력</h2>
@@ -315,7 +311,6 @@
     </div>
   </div>
 
-  <!-- 삭제 확인 모달 -->
   <div id="deleteConfirmModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white p-6 rounded-2xl w-80 shadow-2xl">
       <h2 class="text-xl font-bold mb-4 text-center">예약 삭제</h2>
@@ -335,7 +330,7 @@
     let calendar;
     let isAdminMode = false;
     let currentEvent = null;
-    let currentEventDocId = null; // Firestore 문서 ID 저장
+    let currentEventDocId = null;
     const ADMIN_PASSWORD = "0106*";
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -355,7 +350,7 @@
       }
 
       calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: window.innerWidth < 640 ? 'timeGridDay' : 'timeGridWeek', // 모바일에서는 일간 뷰
+        initialView: 'timeGridWeek',
         headerToolbar: {
           left: 'prev,next today',
           center: 'title',
@@ -363,14 +358,13 @@
         },
         locale: 'ko',
         selectable: true,
-        eventMinHeight: 60, // 이벤트 최소 높이 설정
         events: (fetchInfo, successCallback, failureCallback) => {
           db.collection('reservations').onSnapshot(snapshot => {
             const events = [];
             snapshot.forEach(doc => {
               const eventData = doc.data();
               events.push({
-                id: doc.id, // Firestore 문서 ID 저장
+                id: doc.id,
                 title: eventData.title,
                 start: eventData.start,
                 end: eventData.end,
@@ -385,20 +379,10 @@
             successCallback(events);
           }, failureCallback);
         },
-        eventContent: function(arg) {
-          const content = document.createElement('div');
-          content.className = 'p-1';
-          content.innerHTML = `
-            <div class="text-sm font-bold">${arg.event.title}</div>
-            <div class="text-xs">시간: ${arg.event.start.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} - ${arg.event.end.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</div>
-            <div class="text-xs">룸: ${arg.event.extendedProps.room}</div>
-          `;
-          return { domNodes: [content] };
-        },
         eventClick: function(info) {
           console.log('Event clicked:', info.event.title, info.event.start, info.event.end);
           currentEvent = info.event;
-          currentEventDocId = info.event.id; // Firestore 문서 ID 저장
+          currentEventDocId = info.event.id;
           console.log('Current event set:', currentEvent.title, 'Extended Props:', currentEvent.extendedProps);
           if (isAdminMode) {
             console.log('Admin mode: Opening delete confirmation');
@@ -414,15 +398,6 @@
       calendar.render();
       console.log('Calendar rendered');
       updateAdminButton();
-
-      // 창 크기 변경 시 뷰 업데이트
-      window.addEventListener('resize', () => {
-        if (window.innerWidth < 640 && calendar.view.type !== 'timeGridDay') {
-          calendar.changeView('timeGridDay');
-        } else if (window.innerWidth >= 640 && calendar.view.type !== 'timeGridWeek') {
-          calendar.changeView('timeGridWeek');
-        }
-      });
     });
 
     function getRoomColor(room) {
@@ -501,7 +476,6 @@
         return;
       }
 
-      // 모든 옵션을 기본적으로 활성화
       Array.from(startTimeSelect.options).forEach(option => {
         option.disabled = false;
         option.style.color = '';
@@ -522,7 +496,6 @@
       console.log('Total events in calendar:', events.length);
       const reservedTimes = [];
 
-      // 다른 예약된 시간대 수집
       events.forEach(event => {
         if (event.extendedProps.room === selectedRoom) {
           const eventStart = new Date(event.start);
